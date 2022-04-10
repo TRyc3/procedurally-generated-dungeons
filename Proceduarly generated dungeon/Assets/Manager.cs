@@ -15,7 +15,7 @@ public class Manager : MonoBehaviour{
 
     void Start()
     {
-        MakeLevel(8, 8, 15, 3, 4);
+        MakeLevel(8, 8, 20, 3, 4);
         PopulateTileMap();
     }
 
@@ -599,21 +599,37 @@ public class Manager : MonoBehaviour{
 
         //take list of edges and create minimum spanning tree
         List <Pair <Pair<int, int>, Pair<int, int>>> tree = new List <Pair <Pair<int, int>, Pair<int, int>>>();
-        int paths_checked = 0;
-        count = 0;
-        for (int i = 0; i < verticies.Count - 1; i++){
-            for (int j = paths_checked + 1; j < paths.Count; j++){
-                List <Pair <Pair<int, int>, Pair<int, int>>> visited = new List <Pair <Pair<int, int>, Pair<int, int>>>();
-                if (!cycle_check(tree, visited, paths[j])){
-                    tree.Add(paths[j]);
-                    paths_checked = j;
-                    break;
+        tree.Add(paths[0]);
+        while (tree.Count < verticies.Count - 1){
+            bool inserted = false;
+            for (int j = 0; j < paths.Count; j++){
+                bool already_inserted = false;
+                for (int k = 0; k < tree.Count; k++){
+                    if (((paths[j].First.First == tree[k].First.First && paths[j].First.Second == tree[k].First.Second) &&
+                    (paths[j].Second.First == tree[k].Second.First && paths[j].Second.Second == tree[k].Second.Second)) ||
+                    ((paths[j].First.First == tree[k].Second.First && paths[j].First.Second == tree[k].Second.Second) &&
+                    (paths[j].Second.First == tree[k].First.First && paths[j].Second.Second == tree[k].First.Second))){
+                        already_inserted = true;
+                        break;
+                    }
                 }
+                if (!already_inserted){
+                    List <Pair <Pair<int, int>, Pair<int, int>>> visited = new List <Pair <Pair<int, int>, Pair<int, int>>>();
+                    tree.Add(paths[j]);
+                    if (!cycle_check(tree, visited, paths[j])){
+                        inserted = true;
+                        break;
+                    } else {
+                        tree.Remove(paths[j]);
+                    }
+                }
+            }
+            if (!inserted){
+                tree.RemoveAt(0);
             }
         }
         return (tree);
     }
-
 
     bool cycle_check(List <Pair <Pair<int, int>, Pair<int, int>>> tree, List <Pair <Pair<int, int>, Pair<int, int>>> visited, Pair <Pair<int, int>, Pair<int, int>> edge){
         //check if edge has already been visited
@@ -630,24 +646,23 @@ public class Manager : MonoBehaviour{
         visited.Add(edge);
 
         //find all adjacent edges
-        bool edge1 = false;
-        bool edge2 = false;
+        List <bool> loop = new List<bool>();
         for (int i = 0; i < tree.Count; i++){
-            if ((tree[i].First.First == edge.First.First && tree[i].First.Second == edge.First.Second) && 
-                !(tree[i].Second.First == edge.Second.First && tree[i].Second.Second == edge.Second.Second)){
-                edge1 = cycle_check(tree, visited, tree[i]);
-            }
-            if ((tree[i].First.First == edge.Second.First && tree[i].First.Second == edge.Second.Second) && 
-                       !(tree[i].Second.First == edge.First.First && tree[i].Second.Second == edge.First.Second)){
-                edge2 = cycle_check(tree, visited, tree[i]);
-            }
-            if (edge1 && edge2){
-                break;
+            if (((tree[i].First.First == edge.First.First && tree[i].First.Second == edge.First.Second) && 
+                !(tree[i].Second.First == edge.Second.First && tree[i].Second.Second == edge.Second.Second)) ||
+                ((tree[i].First.First == edge.Second.First && tree[i].First.Second == edge.Second.Second) && 
+                !(tree[i].Second.First == edge.First.First && tree[i].Second.Second == edge.First.Second))){
+                loop.Add(cycle_check(tree, visited, tree[i]));
             }
         }
 
         //if there is no loop on either end, return false
-        return (edge1 && edge2);
+        for (int i = 0; i < loop.Count; i++){
+            if (loop[i]){
+                return (true);
+            }
+        }
+        return (false);
     }
 
     public int count_neighbors(int x, int y, long[] tiles_arr){
